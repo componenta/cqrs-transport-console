@@ -1,0 +1,38 @@
+{
+    "name": "componenta/cqrs-transport-console",
+    "description": "Console worker command for Componenta CQRS command transports",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.4",
+        "componenta/config": "^1.0",
+        "componenta/cqrs-transport": "^1.0",
+        "psr/log": "^3.0",
+        "symfony/console": "^7.4 || ^8.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.0",
+        "phpstan/phpstan": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Componenta\\CQRS\\App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Componenta\\CQRS\\App\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "componenta": {
+            "config-providers": [
+                "Componenta\\CQRS\\App\\Transport\\Console\\ConfigProvider"
+            ]
+        }
+    }
+}
