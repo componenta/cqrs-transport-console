@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace Componenta\CQRS\App\Transport\Console;
 
+use Componenta\App\Console\ConfigKey as ConsoleConfigKey;
 use Componenta\Config\ConfigProvider as BaseConfigProvider;
 use Componenta\CQRS\App\Command\Transport\Console\WorkerCommand;
 
 final class ConfigProvider extends BaseConfigProvider
 {
-    protected function getAutowires(): array
+    /**
+     * @return array<string, list<class-string>>
+     */
+    protected function getConfig(): array
     {
         return [
-            WorkerCommand::class,
+            ConsoleConfigKey::COMMANDS => [
+                WorkerCommand::class,
+            ],
         ];
     }
 }

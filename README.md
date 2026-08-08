@@ -6,7 +6,7 @@ Symfony Console worker command for `componenta/cqrs-transport`.
 composer require componenta/cqrs-transport-console
 ```
 
-Register the provider:
+The Componenta Composer plugin loads the provider automatically. For a manual provider list, load it after `componenta/cqrs`, `componenta/cqrs-transport`, and `componenta/app-console`:
 
 ```php
 return [
@@ -14,4 +14,8 @@ return [
 ];
 ```
 
-The package registers `Componenta\CQRS\App\Command\Transport\Console\WorkerCommand` as an autowired service. The command name is `cqrs:worker`.
+The provider adds `Componenta\CQRS\App\Command\Transport\Console\WorkerCommand` to `console.commands`; the class also declares Symfony's `#[AsCommand(name: 'cqrs:worker')]` metadata. Vendor classes are not part of application source discovery, so the explicit console registration is required.
+
+The command constructor requires `CommandBusInterface`, `CommandSerializerInterface`, and `TransportRegistryInterface`. Install the package only when those transport services are configured; it intentionally has no default queue or serializer policy.
+
+Run `php bin/console.php cqrs:worker [transport]`. The default transport name is `default`.
