@@ -5,8 +5,8 @@
     "license": "MIT",
     "require": {
         "php": ">=8.4",
-        "componenta/app-console": "^1.0",
-        "componenta/config": "^2.0",
+        "componenta/app-console": "^1.0 || ^2.0 || ^3.0",
+        "componenta/config": "^2.0.1",
         "componenta/cqrs-transport": "^2.0",
         "psr/log": "^3.0",
         "symfony/console": "^7.4 || ^8.0"
@@ -26,6 +26,9 @@
         }
     },
     "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
         "sort-packages": true
     },
     "minimum-stability": "stable",

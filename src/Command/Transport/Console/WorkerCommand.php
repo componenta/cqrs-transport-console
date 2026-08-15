@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\CQRS\App\Command\Transport\Console;
 
 use Override;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -16,6 +17,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Componenta\CQRS\Command\CommandBusInterface;
+use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
 use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
 use Componenta\CQRS\Command\Transport\CommandWorker;
 use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
@@ -49,6 +51,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         private readonly CommandSerializerInterface $serializer,
         private readonly TransportRegistryInterface $transports,
         ?LoggerInterface $logger = null,
+        private readonly ?CommandMetadataProviderInterface $commands = null,
     ) {
         parent::__construct();
         $this->logger = $logger ?? new NullLogger();
@@ -99,10 +102,37 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         $io = new SymfonyStyle($input, $output);
 
         $transportName = $input->getArgument('transport');
-        $sleep = (int) $input->getOption('sleep');
-        $limit = $input->getOption('limit') !== null ? (int) $input->getOption('limit') : null;
-        $timeLimit = $input->getOption('time-limit') !== null ? (int) $input->getOption('time-limit') : null;
-        $memoryLimit = $input->getOption('memory-limit') !== null ? (int) $input->getOption('memory-limit') * 1024 * 1024 : null;
+        if (!is_string($transportName) || trim($transportName) === '') {
+            $io->error('Transport name must be a non-empty string.');
+            return Command::FAILURE;
+        }
+
+        try {
+            $sleep = self::nonNegativeInteger($input->getOption('sleep'), 'sleep');
+            if ($sleep === null) {
+                throw new InvalidArgumentException('Option "sleep" is required.');
+            }
+
+            $limit = self::nonNegativeInteger($input->getOption('limit'), 'limit', optional: true);
+            $timeLimit = self::nonNegativeInteger($input->getOption('time-limit'), 'time-limit', optional: true);
+            $memoryLimitMb = self::nonNegativeInteger($input->getOption('memory-limit'), 'memory-limit', optional: true);
+
+            if ($memoryLimitMb !== null
+                && $memoryLimitMb > intdiv(PHP_INT_MAX, 1024 * 1024)
+            ) {
+                throw new InvalidArgumentException(
+                    'Option "memory-limit" is too large.',
+                );
+            }
+
+            $memoryLimit = $memoryLimitMb === null
+                ? null
+                : $memoryLimitMb * 1024 * 1024;
+        } catch (InvalidArgumentException $exception) {
+            $io->error($exception->getMessage());
+
+            return Command::FAILURE;
+        }
 
         if (!$this->transports->has($transportName)) {
             $io->error("Transport '{$transportName}' is not registered");
@@ -116,6 +146,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             $this->serializer,
             $transport,
             logger: $this->logger,
+            commands: $this->commands,
         );
 
         $io->success("Worker started for transport '{$transportName}'");
@@ -134,7 +165,9 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         $processed = 0;
 
         while (true) {
-            if ($this->worker === null) {
+            $worker = $this->activeWorker();
+
+            if ($worker === null) {
                 $io->info('Worker stopped by signal');
                 break;
             }
@@ -154,7 +187,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
                 break;
             }
 
-            if ($this->worker->processOne()) {
+            if ($worker->processOne()) {
                 $processed++;
                 if ($output->isVerbose()) {
                     $io->writeln("Processed: $processed");
@@ -169,6 +202,49 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         return Command::SUCCESS;
     }
 
+    private static function nonNegativeInteger(
+        mixed $value,
+        string $name,
+        bool $optional = false,
+    ): ?int {
+        if ($value === null) {
+            if ($optional) {
+                return null;
+            }
+
+            throw new InvalidArgumentException(sprintf('Option "%s" is required.', $name));
+        }
+
+        if (is_int($value)) {
+            $integer = $value;
+        } elseif (is_string($value) && preg_match('/^-?[0-9]+$/D', $value) === 1) {
+            $integer = filter_var($value, FILTER_VALIDATE_INT);
+
+            if ($integer === false) {
+                throw new InvalidArgumentException(sprintf('Option "%s" is outside the supported integer range.', $name));
+            }
+        } else {
+            throw new InvalidArgumentException(sprintf('Option "%s" must be an integer.', $name));
+        }
+
+        if ($integer < 0) {
+            throw new InvalidArgumentException(sprintf('Option "%s" must be non-negative.', $name));
+        }
+
+        return $integer;
+    }
+
+    /** @phpstan-impure */
+    private function activeWorker(): ?CommandWorker
+    {
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
+
+        return $this->worker;
+    }
+
+    /** @return list<int> */
     #[Override]
     public function getSubscribedSignals(): array
     {
