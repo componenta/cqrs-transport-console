@@ -17,6 +17,7 @@ jobs:
       max-parallel: 1
       matrix:
         php: ['8.4', '8.5']
+        cqrs: ['2.0.1', '3.0.3']
         transport: ['2.0.1', '3.0.1', '4.0.0']
     steps:
       - uses: actions/checkout@v7
@@ -34,13 +35,13 @@ jobs:
       - name: Configure Composer authentication
         run: composer config --global github-oauth.github.com "${{ github.token }}"
       - run: composer validate --strict
-      - name: Select transport version
+      - name: Select dependency versions
         shell: bash
         run: |
           if [ "${{ matrix.transport }}" = "4.0.0" ]; then
             composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"4.0.0"}}}'
           fi
-          composer require --no-update "componenta/cqrs-transport:${{ matrix.transport }}"
+          composer require --no-update "componenta/cqrs:${{ matrix.cqrs }}" "componenta/cqrs-transport:${{ matrix.transport }}"
       - name: Install dependency matrix
         shell: bash
         env:
