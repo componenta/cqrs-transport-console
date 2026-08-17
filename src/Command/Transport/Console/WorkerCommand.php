@@ -131,8 +131,8 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             $this->bus,
             $this->serializer,
             $transport,
-            $this->commands,
-            $this->logger,
+            commands: $this->commands,
+            logger: $this->logger,
         );
 
         $io->success("Worker started for transport '{$transportName}'");
