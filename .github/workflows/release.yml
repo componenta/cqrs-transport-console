@@ -62,9 +62,42 @@ jobs:
       - run: composer test
       - run: composer analyse
 
+  verify-app-console:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app_console: ['1.0.0', '2.0.0', '3.0.3']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Checkout current transport source
+        uses: actions/checkout@v7
+        with:
+          repository: componenta/cqrs-transport
+          ref: main
+          path: .ci/cqrs-transport
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+      - name: Configure Composer authentication
+        run: composer config --global github-oauth.github.com "${{ github.token }}"
+      - run: composer validate --strict
+      - name: Select app-console compatibility version
+        shell: bash
+        run: |
+          composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"4.0.0"}}}'
+          composer require --no-update "componenta/app-console:${{ matrix.app_console }}" "componenta/cqrs:3.0.3" "componenta/cqrs-transport:4.0.0"
+      - name: Install dependency matrix
+        run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
+      - run: composer test
+      - run: composer analyse
+
   publish:
     if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Release v')
-    needs: verify
+    needs: [verify, verify-app-console]
     runs-on: ubuntu-latest
     permissions:
       contents: write
