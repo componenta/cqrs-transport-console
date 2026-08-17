@@ -7,7 +7,7 @@
         "php": ">=8.4",
         "componenta/app-console": "^1.0 || ^2.0 || ^3.0.3",
         "componenta/config": "^2.0.2",
-        "componenta/cqrs-transport": "^2.0 || ^3.0.1",
+        "componenta/cqrs-transport": "^2.0 || ^3.0.1 || ^4.0",
         "psr/log": "^3.0",
         "symfony/console": "^7.4 || ^8.0"
     },
@@ -38,5 +38,9 @@
                 "Componenta\\CQRS\\App\\Transport\\Console\\ConfigProvider"
             ]
         }
+    },
+    "scripts": {
+        "test": "@php vendor/bin/pest",
+        "analyse": "@php vendor/bin/phpstan analyse src --level=max"
     }
 }
