@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Componenta\CQRS\App\Command\Transport\Console;
 
-use Override;
+use Componenta\CQRS\Command\CommandBusInterface;
+use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
+use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
+use Componenta\CQRS\Command\Transport\CommandWorker;
+use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
 use InvalidArgumentException;
+use Override;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -16,27 +21,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Componenta\CQRS\Command\CommandBusInterface;
-use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
-use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
-use Componenta\CQRS\Command\Transport\CommandWorker;
-use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
 
-/**
- * Console command to run transport worker.
- *
- * @example
- * ```bash
- * # Run default transport
- * php bin/console cqrs:worker
- *
- * # Run specific transport
- * php bin/console cqrs:worker emails
- *
- * # With options
- * php bin/console cqrs:worker emails --sleep=5 --limit=100 --time-limit=3600 --memory-limit=128
- * ```
- */
+/** Console command to process CQRS commands from a registered transport. */
 #[AsCommand(
     name: 'cqrs:worker',
     description: 'Process commands from transport',
@@ -50,8 +36,8 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         private readonly CommandBusInterface $bus,
         private readonly CommandSerializerInterface $serializer,
         private readonly TransportRegistryInterface $transports,
+        private readonly CommandMetadataProviderInterface $commands,
         ?LoggerInterface $logger = null,
-        private readonly ?CommandMetadataProviderInterface $commands = null,
     ) {
         parent::__construct();
         $this->logger = $logger ?? new NullLogger();
@@ -145,8 +131,8 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             $this->bus,
             $this->serializer,
             $transport,
-            logger: $this->logger,
-            commands: $this->commands,
+            $this->commands,
+            $this->logger,
         );
 
         $io->success("Worker started for transport '{$transportName}'");
@@ -188,7 +174,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             }
 
             if ($worker->processOne()) {
-                $processed++;
+                ++$processed;
                 if ($output->isVerbose()) {
                     $io->writeln("Processed: $processed");
                 }
@@ -248,11 +234,6 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
     #[Override]
     public function getSubscribedSignals(): array
     {
-        // pcntl is POSIX-only (not on Windows). Without it `SIGINT` /
-        // `SIGTERM` are undefined and the constant reference is a fatal.
-        // On Windows the worker runs without graceful-stop subscription -
-        // Ctrl-C still kills the process via the OS, just without
-        // ack-on-shutdown for the in-flight envelope.
         if (!\defined('SIGINT')) {
             return [];
         }
@@ -269,4 +250,3 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         return false;
     }
 }
-
