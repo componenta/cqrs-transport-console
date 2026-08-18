@@ -76,11 +76,11 @@ jobs:
             app_console: '2.0.0'
             cqrs: '2.0.1'
           - php: '8.4'
-            app_console: '3.0.3'
-            cqrs: '3.0.3'
+            app_console: '3.0.0'
+            cqrs: '3.0.0'
           - php: '8.5'
-            app_console: '3.0.3'
-            cqrs: '3.0.3'
+            app_console: '3.0.0'
+            cqrs: '3.0.0'
     steps:
       - uses: actions/checkout@v7
       - name: Checkout current transport source
