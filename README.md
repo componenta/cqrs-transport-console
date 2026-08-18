@@ -6,7 +6,7 @@ Symfony Console worker command for `componenta/cqrs-transport`.
 composer require componenta/cqrs-transport-console
 ```
 
-The package supports the published transport v2/v3 APIs and the current transport v4 API.
+The package supports `componenta/app-console` v2/v3, Componenta CQRS v2/v3, the published transport v2/v3 APIs, and the current transport v4 API. `app-console` v1 is not declared compatible because it belongs to the older `componenta/config` v1 dependency generation.
 
 The Componenta Composer plugin loads the provider automatically. For a manual provider list, load it after `componenta/cqrs`, `componenta/cqrs-transport`, and `componenta/app-console`:
 
