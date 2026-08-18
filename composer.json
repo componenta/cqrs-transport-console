@@ -5,7 +5,7 @@
     "license": "MIT",
     "require": {
         "php": ">=8.4",
-        "componenta/app-console": "^1.0 || ^2.0 || ^3.0.3",
+        "componenta/app-console": "^2.0 || ^3.0.3",
         "componenta/config": "^2.0.2",
         "componenta/cqrs": "^2.0 || ^3.0.3",
         "componenta/cqrs-transport": "^2.0 || ^3.0.1 || ^4.0",
