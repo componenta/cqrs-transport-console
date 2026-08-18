@@ -6,7 +6,7 @@ Symfony Console worker command for `componenta/cqrs-transport`.
 composer require componenta/cqrs-transport-console
 ```
 
-The package supports `componenta/app-console` v2/v3, Componenta CQRS v2/v3, the published transport v2/v3 APIs, and the current transport v4 API. `app-console` v1 is not declared compatible because it belongs to the older `componenta/config` v1 dependency generation.
+The package supports `componenta/app-console` v2/v3, Componenta CQRS v2/v3, transport v2.0.1+, v3.0.1+, and the current transport v4 API. Transport v2.0.0 is intentionally not supported: it predates the command metadata allowlist accepted by `CommandWorker`, so it cannot provide the fail-closed worker path required by this adapter. `app-console` v1 is not declared compatible because it belongs to the older `componenta/config` v1 dependency generation.
 
 The Componenta Composer plugin loads the provider automatically. For a manual provider list, load it after `componenta/cqrs`, `componenta/cqrs-transport`, and `componenta/app-console`:
 
@@ -25,7 +25,7 @@ The command constructor requires:
 - `TransportRegistryInterface`;
 - a complete `CommandMetadataProviderInterface` allowlist.
 
-The console worker path is fail-closed on every supported transport version because it always supplies the command metadata allowlist explicitly. Current transport v4 makes that allowlist mandatory in `CommandWorker::__construct()`; v3 also fails closed and exposes `CommandWorker::unsafe()` as the explicit trusted-transport bypass. Transport v2 has the older nullable worker API, but this console adapter does not use its unrestricted form.
+The console worker path is fail-closed on every supported transport version because it always supplies the command metadata allowlist explicitly. Current transport v4 makes that allowlist mandatory in `CommandWorker::__construct()`; v3 fails closed when it is omitted and exposes `CommandWorker::unsafe()` as the explicit trusted-transport bypass. Transport v2.0.1 has the older nullable constructor form, but this console adapter always supplies the allowlist and never uses the unrestricted path.
 
 Install the package only when the transport registry and serializer are configured. It intentionally has no default queue or serializer policy.
 
