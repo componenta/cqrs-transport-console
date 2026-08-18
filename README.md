@@ -25,7 +25,7 @@ The command constructor requires:
 - `TransportRegistryInterface`;
 - a complete `CommandMetadataProviderInterface` allowlist.
 
-The safe worker path is always fail-closed. There is no nullable metadata-provider fallback in the console command; unrestricted worker construction is available only through the explicit `CommandWorker::unsafe()` API for integrity-protected trusted transports.
+The console worker path is fail-closed on every supported transport version because it always supplies the command metadata allowlist explicitly. Current transport v4 makes that allowlist mandatory in `CommandWorker::__construct()`; v3 also fails closed and exposes `CommandWorker::unsafe()` as the explicit trusted-transport bypass. Transport v2 has the older nullable worker API, but this console adapter does not use its unrestricted form.
 
 Install the package only when the transport registry and serializer are configured. It intentionally has no default queue or serializer policy.
 
