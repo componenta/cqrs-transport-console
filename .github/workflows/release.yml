@@ -17,7 +17,7 @@ jobs:
       max-parallel: 1
       matrix:
         php: ['8.4', '8.5']
-        cqrs: ['2.0.0', '3.0.3']
+        cqrs: ['2.0.1', '3.0.3']
         transport: ['2.0.1', '3.0.1', '4.0.0']
     steps:
       - uses: actions/checkout@v7
@@ -69,7 +69,11 @@ jobs:
       max-parallel: 1
       matrix:
         php: ['8.4', '8.5']
-        app_console: ['2.0.0', '3.0.3']
+        generation:
+          - app_console: '2.0.0'
+            cqrs: '2.0.1'
+          - app_console: '3.0.3'
+            cqrs: '3.0.3'
     steps:
       - uses: actions/checkout@v7
       - name: Checkout current transport source
@@ -86,11 +90,11 @@ jobs:
       - name: Configure Composer authentication
         run: composer config --global github-oauth.github.com "${{ github.token }}"
       - run: composer validate --strict
-      - name: Select app-console compatibility version
+      - name: Select app-console compatibility generation
         shell: bash
         run: |
           composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"4.0.0"}}}'
-          composer require --no-update "componenta/app-console:${{ matrix.app_console }}" "componenta/cqrs:3.0.3" "componenta/cqrs-transport:4.0.0"
+          composer require --no-update "componenta/app-console:${{ matrix.generation.app_console }}" "componenta/cqrs:${{ matrix.generation.cqrs }}" "componenta/cqrs-transport:4.0.0"
       - name: Install dependency matrix
         run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
       - run: composer test
