@@ -21,7 +21,7 @@ The Componenta Composer plugin loads the provider automatically. For a manual pr
 
 ```php
 return [
-    new Componenta\CQRS\App\Transport\Console\ConfigProvider(),
+    new Componenta\CQRS\App\Command\Transport\Console\ConfigProvider(),
 ];
 ```
 
@@ -35,6 +35,8 @@ The command constructor requires:
 - a complete `CommandMetadataProviderInterface` allowlist.
 
 The console worker path is fail-closed on every supported transport version because it always supplies the command metadata allowlist explicitly. Current transport v4 makes that allowlist mandatory in `CommandWorker::__construct()`; v3 fails closed when it is omitted and exposes `CommandWorker::unsafe()` as the explicit trusted-transport bypass. Transport v2.0.1 has the older nullable constructor form, but this console adapter always supplies the allowlist and never uses the unrestricted path.
+
+`--time-limit` measures elapsed runtime with PHP's monotonic high-resolution clock, so wall-clock adjustments do not extend or shorten a running worker. Command, time, memory, and idle-sleep limits are all non-negative integer options.
 
 Install the package only when the transport registry and serializer are configured. It intentionally has no default queue or serializer policy.
 
