@@ -13,7 +13,8 @@ use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
-it('constructs the safe transport worker before a zero command limit exits', function (): void {
+function compatibilityWorkerTester(): CommandTester
+{
     $transport = new readonly class implements TransportInterface {
         public function send(Envelope $envelope, int $delay = 0): Envelope
         {
@@ -22,7 +23,7 @@ it('constructs the safe transport worker before a zero command limit exits', fun
 
         public function get(): ?Envelope
         {
-            throw new RuntimeException('A zero command limit must exit before polling transport.');
+            throw new RuntimeException('The zero limit must exit before polling transport.');
         }
 
         public function ack(Envelope $envelope): void {}
@@ -47,7 +48,7 @@ it('constructs the safe transport worker before a zero command limit exits', fun
     $bus = new readonly class implements CommandBusInterface {
         public function dispatch(object $command, array $attributes = []): OperationInterface
         {
-            throw new RuntimeException('A zero command limit must not dispatch commands.');
+            throw new RuntimeException('A zero limit must not dispatch commands.');
         }
     };
 
@@ -59,7 +60,7 @@ it('constructs the safe transport worker before a zero command limit exits', fun
 
         public function deserialize(string $payload, string $commandClass): object
         {
-            throw new RuntimeException('A zero command limit must not deserialize commands.');
+            throw new RuntimeException('A zero limit must not deserialize commands.');
         }
     };
 
@@ -75,12 +76,16 @@ it('constructs the safe transport worker before a zero command limit exits', fun
         }
     };
 
-    $tester = new CommandTester(new WorkerCommand(
+    return new CommandTester(new WorkerCommand(
         $bus,
         $serializer,
         $registry,
         $metadata,
     ));
+}
+
+it('constructs the safe transport worker before a zero command limit exits', function (): void {
+    $tester = compatibilityWorkerTester();
 
     $status = $tester->execute([
         'transport' => 'default',
@@ -91,4 +96,18 @@ it('constructs the safe transport worker before a zero command limit exits', fun
     expect($status)->toBe(Command::SUCCESS)
         ->and($tester->getDisplay())->toContain('Worker started')
         ->and($tester->getDisplay())->toContain('Limit reached: 0 commands');
+});
+
+it('uses the monotonic runtime clock before a zero time limit exits', function (): void {
+    $tester = compatibilityWorkerTester();
+
+    $status = $tester->execute([
+        'transport' => 'default',
+        '--time-limit' => '0',
+        '--sleep' => '0',
+    ]);
+
+    expect($status)->toBe(Command::SUCCESS)
+        ->and($tester->getDisplay())->toContain('Worker started')
+        ->and($tester->getDisplay())->toContain('Time limit reached: 0 seconds');
 });
