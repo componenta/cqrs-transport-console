@@ -21,7 +21,7 @@ The Componenta Composer plugin loads the provider automatically. For a manual pr
 
 ```php
 return [
-    new Componenta\CQRS\App\Command\Transport\Console\ConfigProvider(),
+    new Componenta\CQRS\App\Transport\Console\ConfigProvider(),
 ];
 ```
 
