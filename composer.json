@@ -7,7 +7,7 @@
         "php": ">=8.4",
         "componenta/app-console": "^2.0 || ^3.0",
         "componenta/config": "^2.0.2",
-        "componenta/cqrs": "^2.0.1 || ^3.0",
+        "componenta/cqrs": "^2.0.1 || ^3.0 || ^4.0",
         "componenta/cqrs-transport": "^5.0@dev",
         "psr/log": "^3.0",
         "symfony/console": "^7.4 || ^8.0"
@@ -34,6 +34,9 @@
     },
     "minimum-stability": "stable",
     "extra": {
+        "branch-alias": {
+            "dev-main": "3.0.x-dev"
+        },
         "componenta": {
             "config-providers": [
                 "Componenta\\CQRS\\App\\Transport\\Console\\ConfigProvider"
