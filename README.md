@@ -1,12 +1,12 @@
 # Componenta CQRS Transport Console
 
-Symfony Console worker command for `componenta/cqrs-transport` v5.
+Symfony Console worker command for `componenta/cqrs-transport` v5. `main` is the console integration v3 line.
 
 ```bash
 composer require componenta/cqrs-transport-console
 ```
 
-The package targets the transport v5 worker contract. `WorkerCommand` builds a fail-closed `CommandWorker` and requires the same runtime services as that worker:
+The package targets the transport v5 worker contract. `WorkerCommand` builds a fail-closed `CommandWorker` and requires:
 
 - `CommandBusInterface`;
 - `CommandSerializerInterface`;
@@ -14,8 +14,6 @@ The package targets the transport v5 worker contract. `WorkerCommand` builds a f
 - `TransportRegistryInterface`;
 - `CqrsMapProviderInterface`;
 - optional `LoggerInterface`.
-
-The command-class allowlist comes from the active CQRS map, not from reflection metadata. The console integration does not expose an unrestricted worker path.
 
 The Componenta Composer plugin loads the provider automatically. For a manual provider list, load it after `componenta/cqrs`, `componenta/cqrs-transport`, and `componenta/app-console`:
 
@@ -25,7 +23,9 @@ return [
 ];
 ```
 
-The provider adds `Componenta\CQRS\App\Command\Transport\Console\WorkerCommand` to `console.commands`; the class also declares Symfony's `#[AsCommand(name: 'cqrs:worker')]` metadata. Vendor classes are not part of application source discovery, so the explicit console registration is required.
+The provider adds `Componenta\CQRS\App\Command\Transport\Console\WorkerCommand` to `console.commands`; the class also declares Symfony's `#[AsCommand(name: 'cqrs:worker')]` metadata.
+
+The command argument is the **logical transport name**. `WorkerCommand` resolves that name through `TransportRegistryInterface` and passes both the transport object and the same name to `CommandWorker`. Before hydration, the worker verifies that the command's compiled `#[Async(...)]` metadata targets exactly that transport. A command declared for `payments` therefore cannot be hydrated by an `emails` worker merely because a message appeared in the wrong queue.
 
 The transport package supplies the default `OperationContextSerializerInterface`. Applications may replace it with an allowlisted serializer when operation attributes such as tenant, trace, or locale context must cross the async boundary.
 
@@ -39,4 +39,4 @@ Run:
 php bin/console.php cqrs:worker [transport]
 ```
 
-The default transport name is `default`.
+The default logical transport name is `default`.
