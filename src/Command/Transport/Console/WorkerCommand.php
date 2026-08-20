@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Componenta\CQRS\App\Command\Transport\Console;
 
 use Componenta\CQRS\Command\CommandBusInterface;
-use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
 use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
 use Componenta\CQRS\Command\Transport\CommandWorker;
+use Componenta\CQRS\Command\Transport\OperationContextSerializerInterface;
 use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
+use Componenta\CQRS\Map\CqrsMapProviderInterface;
 use InvalidArgumentException;
 use Override;
 use Psr\Log\LoggerInterface;
@@ -35,8 +36,9 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
     public function __construct(
         private readonly CommandBusInterface $bus,
         private readonly CommandSerializerInterface $serializer,
+        private readonly OperationContextSerializerInterface $contextSerializer,
         private readonly TransportRegistryInterface $transports,
-        private readonly CommandMetadataProviderInterface $commands,
+        private readonly CqrsMapProviderInterface $commands,
         ?LoggerInterface $logger = null,
     ) {
         parent::__construct();
@@ -130,6 +132,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         $this->worker = new CommandWorker(
             $this->bus,
             $this->serializer,
+            $this->contextSerializer,
             $transport,
             commands: $this->commands,
             logger: $this->logger,
@@ -144,7 +147,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             $io->info("Time limit: {$timeLimit} seconds");
         }
         if ($memoryLimit !== null) {
-            $io->info("Memory limit: " . ($memoryLimit / 1024 / 1024) . " MB");
+            $io->info('Memory limit: ' . ($memoryLimit / 1024 / 1024) . ' MB');
         }
 
         $startTime = hrtime()[0];
@@ -169,7 +172,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             }
 
             if ($memoryLimit !== null && memory_get_usage(true) >= $memoryLimit) {
-                $io->info("Memory limit reached: " . round(memory_get_usage(true) / 1024 / 1024) . " MB");
+                $io->info('Memory limit reached: ' . round(memory_get_usage(true) / 1024 / 1024) . ' MB');
                 break;
             }
 
