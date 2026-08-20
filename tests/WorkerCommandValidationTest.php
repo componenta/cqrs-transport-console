@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use Componenta\CQRS\App\Command\Transport\Console\WorkerCommand;
 use Componenta\CQRS\Command\CommandBusInterface;
-use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
 use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
+use Componenta\CQRS\Command\Transport\OperationContextSerializerInterface;
 use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
+use Componenta\CQRS\Map\CqrsMapProviderInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -16,8 +17,9 @@ it('rejects negative worker limits before resolving a transport', function (stri
     $command = new WorkerCommand(
         $this->createStub(CommandBusInterface::class),
         $this->createStub(CommandSerializerInterface::class),
+        $this->createStub(OperationContextSerializerInterface::class),
         $transports,
-        $this->createStub(CommandMetadataProviderInterface::class),
+        $this->createStub(CqrsMapProviderInterface::class),
     );
     $tester = new CommandTester($command);
 
