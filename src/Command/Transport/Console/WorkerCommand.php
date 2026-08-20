@@ -130,10 +130,11 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         $transport = $this->transports->get($transportName);
 
         $this->worker = new CommandWorker(
-            $this->bus,
-            $this->serializer,
-            $this->contextSerializer,
-            $transport,
+            bus: $this->bus,
+            serializer: $this->serializer,
+            contextSerializer: $this->contextSerializer,
+            transport: $transport,
+            transportName: $transportName,
             commands: $this->commands,
             logger: $this->logger,
         );
@@ -210,14 +211,23 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             $integer = filter_var($value, FILTER_VALIDATE_INT);
 
             if ($integer === false) {
-                throw new InvalidArgumentException(sprintf('Option "%s" is outside the supported integer range.', $name));
+                throw new InvalidArgumentException(sprintf(
+                    'Option "%s" is outside the supported integer range.',
+                    $name,
+                ));
             }
         } else {
-            throw new InvalidArgumentException(sprintf('Option "%s" must be an integer.', $name));
+            throw new InvalidArgumentException(sprintf(
+                'Option "%s" must be an integer.',
+                $name,
+            ));
         }
 
         if ($integer < 0) {
-            throw new InvalidArgumentException(sprintf('Option "%s" must be non-negative.', $name));
+            throw new InvalidArgumentException(sprintf(
+                'Option "%s" must be non-negative.',
+                $name,
+            ));
         }
 
         return $integer;
