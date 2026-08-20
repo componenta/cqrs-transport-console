@@ -14,13 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         php: ['8.4', '8.5']
-        cqrs: ['2.0.1', '3.0.3']
     steps:
       - uses: actions/checkout@v7
-      - name: Checkout current transport source
+      - name: Checkout current CQRS v4 source
+        uses: actions/checkout@v7
+        with:
+          repository: componenta/cqrs
+          ref: main
+          path: .ci/cqrs
+      - name: Checkout current transport v5 source
         uses: actions/checkout@v7
         with:
           repository: componenta/cqrs-transport
@@ -34,53 +38,31 @@ jobs:
       - name: Configure Composer authentication
         run: composer config --global github-oauth.github.com "${{ github.token }}"
       - run: composer validate --strict
-      - name: Select dependency versions
+      - name: Use current CQRS and transport sources
         shell: bash
         run: |
+          composer config --json repositories.componenta-cqrs '{"type":"path","url":".ci/cqrs","options":{"versions":{"componenta/cqrs":"4.0.0"}}}'
           composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"5.0.0"}}}'
-          composer require --no-update "componenta/cqrs:${{ matrix.cqrs }}" "componenta/cqrs-transport:5.0.0"
-      - name: Install dependency matrix
-        shell: bash
-        env:
-          COMPOSER_MAX_PARALLEL_HTTP: 2
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            if composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              exit 1
-            fi
-
-            sleep $((attempt * 20))
-          done
+      - name: Install dependencies
+        run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
       - run: composer test
       - run: composer analyse
 
-  verify-app-console:
+  verify-minimum-app-console:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
-        include:
-          - php: '8.4'
-            app_console: '2.0.0'
-            cqrs: '2.0.1'
-          - php: '8.5'
-            app_console: '2.0.0'
-            cqrs: '2.0.1'
-          - php: '8.4'
-            app_console: '3.0.0'
-            cqrs: '3.0.0'
-          - php: '8.5'
-            app_console: '3.0.0'
-            cqrs: '3.0.0'
+        php: ['8.4', '8.5']
     steps:
       - uses: actions/checkout@v7
-      - name: Checkout current transport source
+      - name: Checkout current CQRS v4 source
+        uses: actions/checkout@v7
+        with:
+          repository: componenta/cqrs
+          ref: main
+          path: .ci/cqrs
+      - name: Checkout current transport v5 source
         uses: actions/checkout@v7
         with:
           repository: componenta/cqrs-transport
@@ -94,11 +76,12 @@ jobs:
       - name: Configure Composer authentication
         run: composer config --global github-oauth.github.com "${{ github.token }}"
       - run: composer validate --strict
-      - name: Select app-console compatibility generation
+      - name: Select current CQRS/transport and minimum app-console
         shell: bash
         run: |
+          composer config --json repositories.componenta-cqrs '{"type":"path","url":".ci/cqrs","options":{"versions":{"componenta/cqrs":"4.0.0"}}}'
           composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"5.0.0"}}}'
-          composer require --no-update "componenta/app-console:${{ matrix.app_console }}" "componenta/cqrs:${{ matrix.cqrs }}" "componenta/cqrs-transport:5.0.0"
+          composer require --no-update componenta/app-console:3.0.0
       - name: Install dependencies
         run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
       - run: composer test
@@ -106,7 +89,7 @@ jobs:
 
   publish:
     if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Release v')
-    needs: [verify, verify-app-console]
+    needs: [verify, verify-minimum-app-console]
     runs-on: ubuntu-latest
     permissions:
       contents: write
