@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use Componenta\CQRS\App\Command\Transport\Console\WorkerCommand;
 use Componenta\CQRS\Command\CommandBusInterface;
-use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
 use Componenta\CQRS\Command\OperationInterface;
 use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
 use Componenta\CQRS\Command\Transport\Envelope;
+use Componenta\CQRS\Command\Transport\JsonOperationContextSerializer;
 use Componenta\CQRS\Command\Transport\TransportInterface;
 use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
+use Componenta\CQRS\Map\CqrsMap;
+use Componenta\CQRS\Map\CqrsMapProviderInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -27,22 +29,13 @@ function compatibilityWorkerTester(): CommandTester
         }
 
         public function ack(Envelope $envelope): void {}
-
         public function reject(Envelope $envelope): void {}
     };
 
     $registry = new readonly class($transport) implements TransportRegistryInterface {
         public function __construct(private TransportInterface $transport) {}
-
-        public function get(string $name): TransportInterface
-        {
-            return $this->transport;
-        }
-
-        public function has(string $name): bool
-        {
-            return $name === 'default';
-        }
+        public function get(string $name): TransportInterface { return $this->transport; }
+        public function has(string $name): bool { return $name === 'default'; }
     };
 
     $bus = new readonly class implements CommandBusInterface {
@@ -53,34 +46,23 @@ function compatibilityWorkerTester(): CommandTester
     };
 
     $serializer = new readonly class implements CommandSerializerInterface {
-        public function serialize(object $command): string
-        {
-            return '{}';
-        }
-
+        public function serialize(object $command): string { return '{}'; }
         public function deserialize(string $payload, string $commandClass): object
         {
             throw new RuntimeException('A zero limit must not deserialize commands.');
         }
     };
 
-    $metadata = new readonly class implements CommandMetadataProviderInterface {
-        public function get(object|string $command, string $attribute): ?object
-        {
-            return null;
-        }
-
-        public function isKnown(object|string $command): bool
-        {
-            return false;
-        }
+    $commands = new readonly class implements CqrsMapProviderInterface {
+        public function map(): CqrsMap { return new CqrsMap(); }
     };
 
     return new CommandTester(new WorkerCommand(
         $bus,
         $serializer,
+        new JsonOperationContextSerializer(),
         $registry,
-        $metadata,
+        $commands,
     ));
 }
 
