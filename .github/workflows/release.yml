@@ -76,12 +76,12 @@ jobs:
       - name: Configure Composer authentication
         run: composer config --global github-oauth.github.com "${{ github.token }}"
       - run: composer validate --strict
-      - name: Select current CQRS/transport and minimum app-console
+      - name: Select current CQRS/transport and minimum console dependencies
         shell: bash
         run: |
           composer config --json repositories.componenta-cqrs '{"type":"path","url":".ci/cqrs","options":{"versions":{"componenta/cqrs":"4.0.0"}}}'
           composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"5.0.0"}}}'
-          composer require --no-update componenta/app-console:3.0.0
+          composer require --no-update componenta/app-console:3.0.0 symfony/console:7.4.0
       - name: Install dependencies
         run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
       - run: composer test
