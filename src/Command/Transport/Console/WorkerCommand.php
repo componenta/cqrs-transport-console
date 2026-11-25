@@ -189,7 +189,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
                 if ($output->isVerbose()) {
                     $io->writeln("Processed: $processed");
                 }
-            } else {
+            } elseif ($this->activeWorker() !== null) {
                 sleep($sleep);
             }
         }

@@ -20,8 +20,10 @@ use Componenta\CQRS\Transport\Attribute\Async;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Componenta\CQRS\App\Command\Transport\Console\WorkerMonotonicClockProbe;
+use Componenta\CQRS\App\Command\Transport\Console\WorkerIdleSleepProbe;
 
 require_once __DIR__ . '/Fixture/WorkerMonotonicClock.php';
+require_once __DIR__ . '/Fixture/WorkerIdleSleep.php';
 
 function compatibilityWorkerTester(): CommandTester
 {
@@ -180,5 +182,41 @@ it('does not expire a one-second runtime limit at an earlier integer-second boun
             ->and(WorkerMonotonicClockProbe::$readings)->toBe([]);
     } finally {
         WorkerMonotonicClockProbe::$readings = null;
+    }
+});
+
+
+it('honors a stop signal received during an empty poll without another idle wait', function (): void {
+    $command = null;
+    $waits = [];
+    $transport = $this->createMock(TransportInterface::class);
+    $transport->expects($this->once())->method('get')->willReturnCallback(
+        static function () use (&$command): ?Envelope {
+            expect($command->handleSignal(15))->toBeFalse();
+            return null;
+        },
+    );
+    $transport->expects($this->never())->method('ack');
+    $transport->expects($this->never())->method('reject');
+    $registry = new TransportRegistry();
+    $registry->register('default', $transport);
+    $bus = $this->createMock(CommandBusInterface::class);
+    $bus->expects($this->never())->method('dispatch');
+    $command = new WorkerCommand(
+        $bus,
+        $this->createStub(CommandSerializerInterface::class),
+        new JsonOperationContextSerializer(),
+        $registry,
+    );
+    $tester = new CommandTester($command);
+    WorkerIdleSleepProbe::$sleep = static function (int $seconds) use (&$waits): void {
+        $waits[] = $seconds;
+    };
+    try {
+        expect($tester->execute(['--sleep' => '5']))->toBe(Command::SUCCESS)
+            ->and($tester->getDisplay())->toContain('Worker stopped by signal')
+            ->and($waits)->toBe([]);
+    } finally {
+        WorkerIdleSleepProbe::$sleep = null;
     }
 });
