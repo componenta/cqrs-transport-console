@@ -220,3 +220,13 @@ it('honors a stop signal received during an empty poll without another idle wait
         WorkerIdleSleepProbe::$sleep = null;
     }
 });
+
+
+it('honors the zero memory limit before polling or executing a command', function (): void {
+    $tester = compatibilityWorkerTester();
+
+    expect($tester->execute(['--memory-limit' => '0']))->toBe(Command::SUCCESS)
+        ->and($tester->getDisplay())->toContain('Memory limit: 0 MB')
+        ->and($tester->getDisplay())->toContain('Memory limit reached')
+        ->and($tester->getDisplay())->toContain('Processed: 0 commands');
+});

@@ -49,3 +49,32 @@ it('rejects an overflowing memory limit and malformed numeric options before tra
     ['--limit', (string) PHP_INT_MAX . '0', 'outside the supported integer range'],
     ['--sleep', '0.5', 'must be an integer'],
 ]);
+
+
+it('rejects a blank transport name before resolving the registry', function (string $name): void {
+    $registry = $this->createMock(TransportRegistryInterface::class);
+    $registry->expects($this->never())->method('has');
+    $registry->expects($this->never())->method('get');
+    $tester = new CommandTester(new WorkerCommand(
+        $this->createStub(CommandBusInterface::class),
+        $this->createStub(CommandSerializerInterface::class),
+        $this->createStub(OperationContextSerializerInterface::class),
+        $registry,
+    ));
+    expect($tester->execute(['transport' => $name]))->toBe(Command::FAILURE)
+        ->and($tester->getDisplay())->toContain('Transport name must be a non-empty string');
+})->with(['', " \t"]);
+
+it('reports an unregistered transport without trying to resolve or poll it', function (): void {
+    $registry = $this->createMock(TransportRegistryInterface::class);
+    $registry->expects($this->once())->method('has')->with('missing')->willReturn(false);
+    $registry->expects($this->never())->method('get');
+    $tester = new CommandTester(new WorkerCommand(
+        $this->createStub(CommandBusInterface::class),
+        $this->createStub(CommandSerializerInterface::class),
+        $this->createStub(OperationContextSerializerInterface::class),
+        $registry,
+    ));
+    expect($tester->execute(['transport' => 'missing']))->toBe(Command::FAILURE)
+        ->and($tester->getDisplay())->toContain("Transport 'missing' is not registered");
+});
