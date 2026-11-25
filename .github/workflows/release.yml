@@ -18,17 +18,17 @@ jobs:
         php: ['8.4', '8.5']
     steps:
       - uses: actions/checkout@v7
-      - name: Checkout current CQRS v4 source
+      - name: Checkout released CQRS v4 source
         uses: actions/checkout@v7
         with:
           repository: componenta/cqrs
-          ref: main
+          ref: v4.0.0
           path: .ci/cqrs
-      - name: Checkout current transport v5 source
+      - name: Checkout released transport v5 source
         uses: actions/checkout@v7
         with:
           repository: componenta/cqrs-transport
-          ref: main
+          ref: v5.0.0
           path: .ci/cqrs-transport
       - uses: shivammathur/setup-php@v2
         with:
@@ -56,17 +56,17 @@ jobs:
         php: ['8.4', '8.5']
     steps:
       - uses: actions/checkout@v7
-      - name: Checkout current CQRS v4 source
+      - name: Checkout released CQRS v4 source
         uses: actions/checkout@v7
         with:
           repository: componenta/cqrs
-          ref: main
+          ref: v4.0.0
           path: .ci/cqrs
-      - name: Checkout current transport v5 source
+      - name: Checkout released transport v5 source
         uses: actions/checkout@v7
         with:
           repository: componenta/cqrs-transport
-          ref: main
+          ref: v5.0.0
           path: .ci/cqrs-transport
       - uses: shivammathur/setup-php@v2
         with:
@@ -81,7 +81,7 @@ jobs:
         run: |
           composer config --json repositories.componenta-cqrs '{"type":"path","url":".ci/cqrs","options":{"versions":{"componenta/cqrs":"4.0.0"}}}'
           composer config --json repositories.componenta-cqrs-transport '{"type":"path","url":".ci/cqrs-transport","options":{"versions":{"componenta/cqrs-transport":"5.0.0"}}}'
-          composer require --no-update componenta/app-console:3.0.0 symfony/console:7.4.0
+          composer require --no-update componenta/app-console:5.0.0 symfony/console:7.4.0
       - name: Install dependencies
         run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
       - run: composer test

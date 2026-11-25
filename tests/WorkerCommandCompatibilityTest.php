@@ -10,8 +10,13 @@ use Componenta\CQRS\Command\Transport\Envelope;
 use Componenta\CQRS\Command\Transport\JsonOperationContextSerializer;
 use Componenta\CQRS\Command\Transport\TransportInterface;
 use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
-use Componenta\CQRS\Map\CqrsMap;
-use Componenta\CQRS\Map\CqrsMapProviderInterface;
+use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
+use Componenta\CQRS\Command\Middleware\TransportMiddleware;
+use Componenta\CQRS\Command\Operation;
+use Componenta\CQRS\Command\Transport\CommandWorker;
+use Componenta\CQRS\Command\Transport\ExecutionMode;
+use Componenta\CQRS\Command\Transport\TransportRegistry;
+use Componenta\CQRS\Transport\Attribute\Async;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -53,16 +58,11 @@ function compatibilityWorkerTester(): CommandTester
         }
     };
 
-    $commands = new readonly class implements CqrsMapProviderInterface {
-        public function map(): CqrsMap { return new CqrsMap(); }
-    };
-
     return new CommandTester(new WorkerCommand(
         $bus,
         $serializer,
         new JsonOperationContextSerializer(),
         $registry,
-        $commands,
     ));
 }
 
@@ -92,4 +92,62 @@ it('uses the monotonic runtime clock before a zero time limit exits', function (
     expect($status)->toBe(Command::SUCCESS)
         ->and($tester->getDisplay())->toContain('Worker started')
         ->and($tester->getDisplay())->toContain('Time limit reached: 0 seconds');
+});
+
+it('processes a delivery through the injected command metadata provider without a handler map', function (): void {
+    $envelope = new Envelope('producer-id', stdClass::class, '{}');
+    $transport = new class ($envelope) implements TransportInterface {
+        public int $acks = 0;
+        public int $rejects = 0;
+        public function __construct(private ?Envelope $envelope) {}
+        public function send(Envelope $envelope, int $delay = 0): Envelope { return $envelope; }
+        public function get(): ?Envelope
+        {
+            $envelope = $this->envelope;
+            $this->envelope = null;
+            return $envelope;
+        }
+        public function ack(Envelope $envelope): void { ++$this->acks; }
+        public function reject(Envelope $envelope): void { ++$this->rejects; }
+    };
+    $registry = new TransportRegistry();
+    $registry->register('default', $transport);
+    $bus = new class implements CommandBusInterface {
+        public array $operations = [];
+        public function dispatch(object $command, array $attributes = []): OperationInterface
+        {
+            $operation = Operation::create($command, $attributes);
+            $this->operations[] = $operation;
+            return $operation;
+        }
+    };
+    $serializer = new readonly class implements CommandSerializerInterface {
+        public function serialize(object $command): string { return '{}'; }
+        public function deserialize(string $payload, string $commandClass): object { return new stdClass(); }
+    };
+    $metadata = new class implements CommandMetadataProviderInterface {
+        public array $lookups = [];
+        public function get(object|string $command, string $attribute): ?object
+        {
+            $this->lookups[] = [$command, $attribute];
+            return $attribute === Async::class ? new Async('default') : null;
+        }
+    };
+
+    $tester = new CommandTester(new WorkerCommand(
+        $bus,
+        $serializer,
+        new JsonOperationContextSerializer(),
+        $registry,
+        $metadata,
+    ));
+    $status = $tester->execute(['--limit' => '1', '--sleep' => '0']);
+
+    expect($status)->toBe(Command::SUCCESS)
+        ->and($transport->acks)->toBe(1)
+        ->and($transport->rejects)->toBe(0)
+        ->and($bus->operations)->toHaveCount(1)
+        ->and($metadata->lookups)->toBe([[$bus->operations[0]->command, Async::class]])
+        ->and($bus->operations[0]->attributes[CommandWorker::ATTR_ORIGINAL_OPERATION_ID])->toBe('producer-id')
+        ->and($bus->operations[0]->attributes[TransportMiddleware::ATTR_EXECUTION_MODE])->toBe(ExecutionMode::SYNC);
 });

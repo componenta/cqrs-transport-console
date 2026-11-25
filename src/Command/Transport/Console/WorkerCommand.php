@@ -9,7 +9,8 @@ use Componenta\CQRS\Command\Transport\CommandSerializerInterface;
 use Componenta\CQRS\Command\Transport\CommandWorker;
 use Componenta\CQRS\Command\Transport\OperationContextSerializerInterface;
 use Componenta\CQRS\Command\Transport\TransportRegistryInterface;
-use Componenta\CQRS\Map\CqrsMapProviderInterface;
+use Componenta\CQRS\Command\Metadata\CommandMetadataProviderInterface;
+use Componenta\CQRS\Command\Metadata\ReflectionCommandMetadataProvider;
 use InvalidArgumentException;
 use Override;
 use Psr\Log\LoggerInterface;
@@ -38,7 +39,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
         private readonly CommandSerializerInterface $serializer,
         private readonly OperationContextSerializerInterface $contextSerializer,
         private readonly TransportRegistryInterface $transports,
-        private readonly CqrsMapProviderInterface $commands,
+        private readonly CommandMetadataProviderInterface $metadata = new ReflectionCommandMetadataProvider(),
         ?LoggerInterface $logger = null,
     ) {
         parent::__construct();
@@ -135,7 +136,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             contextSerializer: $this->contextSerializer,
             transport: $transport,
             transportName: $transportName,
-            commands: $this->commands,
+            metadata: $this->metadata,
             logger: $this->logger,
         );
 

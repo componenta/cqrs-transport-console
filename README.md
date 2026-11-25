@@ -1,6 +1,6 @@
 # Componenta CQRS Transport Console
 
-Symfony Console worker command for `componenta/cqrs-transport` v5. `main` is the console integration v3 line.
+Symfony Console worker command for `componenta/cqrs-transport` v5 and Componenta App Console 5 / Config 3.
 
 ```bash
 composer require componenta/cqrs-transport-console
@@ -12,7 +12,7 @@ The package targets the transport v5 worker contract. `WorkerCommand` builds a f
 - `CommandSerializerInterface`;
 - `OperationContextSerializerInterface`;
 - `TransportRegistryInterface`;
-- `CqrsMapProviderInterface`;
+- `CommandMetadataProviderInterface` (defaults to `ReflectionCommandMetadataProvider`);
 - optional `LoggerInterface`.
 
 The Componenta Composer plugin loads the provider automatically. For a manual provider list, load it after `componenta/cqrs`, `componenta/cqrs-transport`, and `componenta/app-console`:
@@ -25,7 +25,7 @@ return [
 
 The provider adds `Componenta\CQRS\App\Command\Transport\Console\WorkerCommand` to `console.commands`; the class also declares Symfony's `#[AsCommand(name: 'cqrs:worker')]` metadata.
 
-The command argument is the **logical transport name**. `WorkerCommand` resolves that name through `TransportRegistryInterface` and passes both the transport object and the same name to `CommandWorker`. Before hydration, the worker verifies that the command's compiled `#[Async(...)]` metadata targets exactly that transport. A command declared for `payments` therefore cannot be hydrated by an `emails` worker merely because a message appeared in the wrong queue.
+The command argument is the **logical transport name**. `WorkerCommand` resolves that name through `TransportRegistryInterface` and passes both the transport object and the same name to `CommandWorker`. After deserializing the command and before dispatch, the worker verifies that the command's `#[Async(...)]` metadata targets exactly that transport. A command declared for `payments` therefore cannot be dispatched by an `emails` worker merely because a message appeared in the wrong queue. Command serializers remain responsible for safely constructing allowed command types.
 
 The transport package supplies the default `OperationContextSerializerInterface`. Applications may replace it with an allowlisted serializer when operation attributes such as tenant, trace, or locale context must cross the async boundary.
 
