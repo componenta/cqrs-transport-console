@@ -152,7 +152,7 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
             $io->info('Memory limit: ' . ($memoryLimit / 1024 / 1024) . ' MB');
         }
 
-        $startTime = hrtime()[0];
+        $startTime = hrtime();
         $processed = 0;
 
         while (true) {
@@ -168,9 +168,15 @@ final class WorkerCommand extends Command implements SignalableCommandInterface
                 break;
             }
 
-            if ($timeLimit !== null && (hrtime()[0] - $startTime) >= $timeLimit) {
-                $io->info("Time limit reached: $timeLimit seconds");
-                break;
+            if ($timeLimit !== null) {
+                $now = hrtime();
+                $elapsedSeconds = $now[0] - $startTime[0]
+                    - (int) ($now[1] < $startTime[1]);
+
+                if ($elapsedSeconds >= $timeLimit) {
+                    $io->info("Time limit reached: $timeLimit seconds");
+                    break;
+                }
             }
 
             if ($memoryLimit !== null && memory_get_usage(true) >= $memoryLimit) {

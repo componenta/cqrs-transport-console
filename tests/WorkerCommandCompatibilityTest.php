@@ -19,6 +19,9 @@ use Componenta\CQRS\Command\Transport\TransportRegistry;
 use Componenta\CQRS\Transport\Attribute\Async;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Componenta\CQRS\App\Command\Transport\Console\WorkerMonotonicClockProbe;
+
+require_once __DIR__ . '/Fixture/WorkerMonotonicClock.php';
 
 function compatibilityWorkerTester(): CommandTester
 {
@@ -150,4 +153,32 @@ it('processes a delivery through the injected command metadata provider without 
         ->and($metadata->lookups)->toBe([[$bus->operations[0]->command, Async::class]])
         ->and($bus->operations[0]->attributes[CommandWorker::ATTR_ORIGINAL_OPERATION_ID])->toBe('producer-id')
         ->and($bus->operations[0]->attributes[TransportMiddleware::ATTR_EXECUTION_MODE])->toBe(ExecutionMode::SYNC);
+});
+
+it('does not expire a one-second runtime limit at an earlier integer-second boundary', function (): void {
+    $transport = $this->createMock(TransportInterface::class);
+    $transport->expects($this->once())->method('get')->willReturn(null);
+    $registry = new TransportRegistry();
+    $registry->register('default', $transport);
+    $tester = new CommandTester(new WorkerCommand(
+        $this->createStub(CommandBusInterface::class),
+        $this->createStub(CommandSerializerInterface::class),
+        new JsonOperationContextSerializer(),
+        $registry,
+    ));
+
+    WorkerMonotonicClockProbe::$readings = [
+        [100, 900_000_000], // start
+        [101, 100_000_000], // 0.2 seconds elapsed: still poll
+        [101, 900_000_000], // 1.0 seconds elapsed: exit
+    ];
+    try {
+        $status = $tester->execute(['--time-limit' => '1', '--sleep' => '0']);
+
+        expect($status)->toBe(Command::SUCCESS)
+            ->and($tester->getDisplay())->toContain('Time limit reached: 1 seconds')
+            ->and(WorkerMonotonicClockProbe::$readings)->toBe([]);
+    } finally {
+        WorkerMonotonicClockProbe::$readings = null;
+    }
 });

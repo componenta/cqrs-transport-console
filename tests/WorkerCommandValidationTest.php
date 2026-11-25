@@ -31,3 +31,21 @@ it('rejects negative worker limits before resolving a transport', function (stri
     'time limit' => ['--time-limit'],
     'memory limit' => ['--memory-limit'],
 ]);
+
+it('rejects an overflowing memory limit and malformed numeric options before transport lookup', function (string $option, string $value, string $diagnostic): void {
+    $registry = $this->createMock(TransportRegistryInterface::class);
+    $registry->expects($this->never())->method('has');
+    $tester = new CommandTester(new WorkerCommand(
+        $this->createStub(CommandBusInterface::class),
+        $this->createStub(CommandSerializerInterface::class),
+        $this->createStub(OperationContextSerializerInterface::class),
+        $registry,
+    ));
+
+    expect($tester->execute([$option => $value]))->toBe(Command::FAILURE)
+        ->and($tester->getDisplay())->toContain($diagnostic);
+})->with([
+    ['--memory-limit', (string) PHP_INT_MAX, 'too large'],
+    ['--limit', (string) PHP_INT_MAX . '0', 'outside the supported integer range'],
+    ['--sleep', '0.5', 'must be an integer'],
+]);

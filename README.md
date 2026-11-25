@@ -29,7 +29,7 @@ The command argument is the **logical transport name**. `WorkerCommand` resolves
 
 The transport package supplies the default `OperationContextSerializerInterface`. Applications may replace it with an allowlisted serializer when operation attributes such as tenant, trace, or locale context must cross the async boundary.
 
-`--time-limit` measures elapsed runtime with PHP's monotonic high-resolution clock, so wall-clock adjustments do not extend or shorten a running worker. Command, time, memory, and idle-sleep limits are all non-negative integer options.
+`--time-limit` measures elapsed runtime with PHP's monotonic high-resolution clock, including the fractional-second component, so wall-clock adjustments and second boundaries do not prematurely expire the limit. Limits are checked between deliveries; they do not interrupt an active command or guarantee a hard deadline during blocking transport calls or idle sleep. Command, time, memory, and idle-sleep limits are all non-negative integer options.
 
 Install the package only when the transport registry and command serializer are configured. It intentionally has no default queue or command serializer policy.
 
